@@ -5,25 +5,25 @@ const { send } = require("./helpers/telegram");
 const mpByLink = require("./rawat/mpByLink");
 const { tutupObrolan, belumLogin, checkpoint, tinjauan } = require("./helpers/facebook")
 
-// const folderPath = "C:/Users/Administrator/Documents/fbmp/Cookies"; // Gantilah dengan path folder yang sesuai
+// const folderPath = "Cookies"; // Gantilah dengan path folder yang sesuai
 // const folderPath = "Cookies"; // Gantilah dengan path folder yang sesuai
 
-const folderCp = "C:/Users/Administrator/Documents/fbmp/Cookies/cp"; // Gantilah dengan path folder yang sesuai
-const folderTinjauan = "C:/Users/Administrator/Documents/fbmp/tinjauan/Cookies"; // Gantilah dengan path folder yang sesuai
+const folderCp = "Cookies/cp"; // Gantilah dengan path folder yang sesuai
+const folderTinjauan = "Cookies/tinjauan"; // Gantilah dengan path folder yang sesuai
 
 
 
 // Baca isi direktori
 // let file_cookies = [];
-function check(folderPath = "C:/Users/Administrator/Documents/fbmp/Cookies", tipe) {
+function check(folderPath = "Cookies", tipe) {
     (async () => {
         send(`🔵[FB CHECK] start check, jam : ${new Date().getHours()}`)
         const pesanJson = JSON.parse(fs.readFileSync(`pesan.json`));
 
         do {
             const browser = await puppeteer.launch({
-                headless: 'new',
-                // headless: false,
+                // headless: 'new',
+                headless: false,
                 // slowMo: 100,
                 defaultViewport: null,
                 args: ["--start-maximized"],
@@ -65,6 +65,7 @@ function check(folderPath = "C:/Users/Administrator/Documents/fbmp/Cookies", tip
                     await tutupObrolan(page);
 
                     await belumLogin(page);
+
 
                     if (await checkpoint(page, dt, folderPath, folderCp, fileNames[i])) {
                         continue

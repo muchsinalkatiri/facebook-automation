@@ -5,7 +5,7 @@ const { tutupObrolan } = require("../helpers/facebook")
 
 async function mpByLink(page, userId) {
     try {
-        const masterLinkPath = 'C:/Users/Administrator/Documents/fbmp/Cookies/master/masterLinkMp.csv'
+        const masterLinkPath = 'Cookies/master/masterLinkMp.csv'
         const masterLink = await csvToJson(masterLinkPath);
         masterLink.sort((a, b) => {
             return a.klik_kita - b.klik_kita;

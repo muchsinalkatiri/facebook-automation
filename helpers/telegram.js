@@ -1,12 +1,17 @@
 const axios = require("axios");
+const dotenv = require('dotenv')
+dotenv.config();
+
+// Akses variabel dari .env
 
 const send = async function (message, reply_id) {
-  const chat_id = "";
-  const bot_id = "";
-  const thread_id = "";
+const chatId = process.env.CHAT_ID;
+const botId = process.env.BOT_ID;
+
+  const thread_id = "660";
 
   const config = {
-    chat_id: chat_id,
+    chat_id: chatId,
     text: message,
     message_thread_id: thread_id,
   };
@@ -17,7 +22,7 @@ const send = async function (message, reply_id) {
 
   try {
     const response = await axios.post(
-      `https://api.telegram.org/bot${bot_id}/sendmessage`,
+      `https://api.telegram.org/bot${botId}/sendmessage`,
       config
     );
     return response.data;

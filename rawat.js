@@ -18,9 +18,9 @@ const chatTemanOnline = require("./rawat/chatTemanOnline");
 const { send } = require("./helpers/telegram");
 
 // const folderPath = "Cookies"; // Gantilah dengan path folder yang sesuai
-const folderCp = "C:/Users/Administrator/Documents/fbmp/Cookies/cp"; // Gantilah dengan path folder yang sesuai
+const folderCp = "Cookies/cp"; // Gantilah dengan path folder yang sesuai
 
-function rawat(folderPath = "C:/Users/Administrator/Documents/fbmp/Cookies") {
+function rawat(folderPath = "Cookies") {
     (async () => {
         let cp = 0;
         const startTime = getCurrentDate() + " " + getCurrentTime();
