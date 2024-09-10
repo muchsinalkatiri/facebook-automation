@@ -2,7 +2,7 @@ const fs = require("fs");
 const { parseCookieData } = require("./helpers/cookies");
 const puppeteer = require("puppeteer");
 const readline = require("readline");
-
+let {cookiesPath} = require("./helpers/facebook");
 
 
 (async () => {
@@ -20,37 +20,23 @@ const readline = require("readline");
         });
     });
 
-    akun = akun
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join('_');
-
-    let folderPath = "C:/Users/Administrator/Documents/fbmp/Cookies"; // Gantilah dengan path folder yang sesuai
-    // let folderPath = "Cookies"; // Gantilah dengan path folder yang sesuai
-
-    if (folder) {
-        folderPath = `${folderPath}/${folder}`;
-    }
-
-
-
-    const fileName = fs.readdirSync(folderPath);
-    const fileNames = fileName.filter((filename) => filename.endsWith(".csv"));
-
-
 
     if (!akun) {
         console.log("akun tidak ditulis. Program akan berhenti.");
         process.exit(1); // Keluar dengan kode error
     }
 
-    akun = akun.charAt(0).toUpperCase() + akun.slice(1);
-    // console.log(akun)
-    // return
+    if (folder) {
+        cookiesPath = `${cookiesPath}/${folder}`;
+    }
+
+
+
+    const fileName = fs.readdirSync(cookiesPath);
 
     const akunArr = []
     // console.log(fileNames);
-    for (const element of fileNames) {
+    for (const element of fileName) {
         if (element.startsWith(akun)) {
             akunArr.push(element);
         }
@@ -67,15 +53,13 @@ const readline = require("readline");
     console.log(akun);
 
 
-    if (!fs.existsSync(`${folderPath}/${akun}`)) {
+    const folderPath = `${cookiesPath}/${akun}/${akun}.json`
+    if (!fs.existsSync(folderPath)) {
         console.log("file not exsist")
         return
     }
-    const csvContent = await fs.readFileSync(
-        `${folderPath}/${akun}`,
-        "utf-8"
-    );
-    const cookie = await parseCookieData(csvContent);
+
+    const cookie = JSON.parse(fs.readFileSync(folderPath));
 
     const browser = await puppeteer.launch({
         headless: false,

@@ -64,13 +64,14 @@ function check(folderPath = "Cookies", tipe) {
                     await page.waitForTimeout(5000);
                     await tutupObrolan(page);
 
-                    await belumLogin(page);
+                    await belumLogin(page, dt);
 
 
                     if (await checkpoint(page, dt, folderPath, folderCp, fileNames[i])) {
+                        await page.deleteCookie();
+                        await page.close();
                         continue
                     }
-
 
                     await mpByLink(page, dt[1]);
 

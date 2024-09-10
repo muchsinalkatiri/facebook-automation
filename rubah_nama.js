@@ -2,10 +2,16 @@ const fs = require("fs");
 const puppeteer = require("puppeteer");
 const csv = require("csv-parser");
 const { send } = require("./helpers/telegram");
+const { tutupObrolan, belumLogin, checkpoint, tinjauan } = require("./helpers/facebook")
+
+
 
 
 // const folderPath = "C:/Users/Administrator/Documents/fbmp/Cookies"; // Gantilah dengan path folder yang sesuai
 const folderPath = "Cookies"; // Gantilah dengan path folder yang sesuai
+const folderCp = "Cookies/cp"; // Gantilah dengan path folder yang sesuai
+const folderFl = "Cookies/failed_login"; // Gantilah dengan path folder yang sesuai
+
 
 // Baca isi direktori
 // let file_cookies = [];
@@ -21,7 +27,11 @@ const folderPath = "Cookies"; // Gantilah dengan path folder yang sesuai
 
 
     for (let i = 0; i < fileNames.length; i++) {
-        console.log(fileNames[i]);
+        console.log(fileNames[i])
+        let browser;
+        try{
+        const dt = fileNames[i].replace('.csv', '').split('#');
+
         if (!fs.existsSync(`${folderPath}/${fileNames[i]}`)) {
             continue
         }
@@ -33,7 +43,7 @@ const folderPath = "Cookies"; // Gantilah dengan path folder yang sesuai
         // console.log(cookie);
         // return;
 
-        const browser = await puppeteer.launch({
+        browser = await puppeteer.launch({
             headless: false,
             slowMo: 100,
             defaultViewport: null,
@@ -44,12 +54,23 @@ const folderPath = "Cookies"; // Gantilah dengan path folder yang sesuai
 
         await page.setCookie(...cookie);
 
+         await page.goto("https://facebook.com/", {
+                        waitUntil: ["load"],
+                        timeout: 50000,
+                    });
+
+        if(await belumLogin(page, dt, folderPath, folderFl, fileNames[i])){
+            console.log("failed login");
+            await browser.close();
+            continue;
+        }
+
         await page.goto("https://www.facebook.com/profile", {
             waitUntil: ["load"],
             timeout: 50000,
         });
 
-        if (page.url().includes("checkpoint")) {
+        if (await checkpoint(page, dt, folderPath, folderCp, fileNames[i])) {
             console.log("checkpoint");
             await browser.close();
             continue;
@@ -99,11 +120,12 @@ const folderPath = "Cookies"; // Gantilah dengan path folder yang sesuai
         data.push({ email });
 
         //pass
-        if (fileNames[i].startsWith('0')) {
             pass = 'akunfb.id';
-        } else if (fileNames[i].startsWith('1')) {
-            pass = 'Muchsin3011';
-        }
+        // if (fileNames[i].startsWith('0')) {
+            // pass = 'akunfb.id';
+        // } else if (fileNames[i].startsWith('1')) {
+            // pass = 'Muchsin3011';
+        // }
         data.push({ pass });
 
 
@@ -115,7 +137,13 @@ const folderPath = "Cookies"; // Gantilah dengan path folder yang sesuai
 
         await fs.writeFileSync(`${folderPath}/new/${namaFileBaru}.csv`, transformedData);
 
-        await browser.close();
+}catch (e) {
+            console.error(e); // Log the error and continue to the next iteration
+        } finally {
+            if (browser) {
+                await browser.close(); // Ensure the browser is closed
+            }
+        }
         total++
         continue;
     }
