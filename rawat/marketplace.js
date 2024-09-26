@@ -59,13 +59,13 @@ async function marketplace(page) {
         await page.waitForTimeout(10000);
         await page.click('div[aria-label="Simpan"]');
         await page.waitForTimeout(5000);
-        await page.click('div[aria-label="Bagikan"]');
+        await page.click('div[aria-label^="Bagikan"]');
         await page.waitForTimeout(5000);
-        const buttons = await page.$x(`//span[text()='Bagikan Tawaran']`);
+        const buttons = await page.$x(`//span[text()='Bagikan sekarang']`);
         await buttons[0].click();
-        await page.waitForTimeout(5000);
-        await page.click('div[aria-label="Bagikan Tawaran"]');
-        await page.waitForTimeout(5000);
+        // await page.waitForTimeout(5000);
+        // await page.click('div[aria-label="Bagikan Tawaran"]');
+        // await page.waitForTimeout(5000);
     } catch (e) {
         console.log(e.message)
 

@@ -24,7 +24,7 @@ async function saranTeman(page) {
     });
 
     await page.waitForTimeout(6000);
-    const buttons = await page.$x(`//span[text()='Tambah jadi teman']`);
+    const buttons = await page.$$(`div[aria-label="Tambah jadi teman"]`);
     const randomIndex = Math.floor(Math.random() * buttons.length);
 
     try {

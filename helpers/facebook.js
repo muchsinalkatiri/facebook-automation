@@ -88,6 +88,35 @@ async function updateListAccount(nomor, nama, data) {
     }
 }
 
+
+async function updateJson(cookies, path) {
+    try {
+        const formattedCookies = cookies.map(cookie => ({
+            domain: cookie.domain || null,
+            expirationDate: cookie.expires > 0 ? cookie.expires : null,
+            hostOnly: cookie.hostOnly || false,
+            httpOnly: cookie.httpOnly || false,
+            name: cookie.name || '',
+            path: cookie.path || '/',
+            sameSite: cookie.sameSite ? "no_restriction" : "Lax", // Adjust based on provided example
+            secure: cookie.secure || false,
+            session: cookie.session !== undefined ? cookie.session : !cookie.expires,
+            storeId: null, // Hardcoded to null as per example
+            value: cookie.value || ''
+        }));
+
+        await fs.writeFileSync(
+            path,
+            JSON.stringify(formattedCookies, null, 2) // Pretty-print JSON
+        );
+        console.log('Cookies berhasil diperbarui dalam format yang kompatibel dengan browser.');
+        return true;
+    } catch (error) {
+        console.error('Gagal memperbarui file Cookies json:', error);
+        return false;
+    }
+}
+
 async function tutupObrolan(page) {
 
     const tutupObrolanBtn = await page.$$(`div[aria-label="Tutup obrolan"]`);
@@ -146,7 +175,9 @@ async function isLogin(page, data) {
     await page.waitForTimeout(5000);
     if ((await page.$('input[id="email"]')) !== null) { //jika belum login
         log(chalk.red(`[GAGAL LOGIN] ${nama}`));
-        send(`🔴FAILED LOGIN : ${nama}`)
+        if(data['Status'] != 'Gagal Login'){
+            send(`🔴FAILED LOGIN : ${nama}`)
+        }
         return false; //gagal login
     }else{
         log(chalk.green(`[LOGIN] ${nama}`));
@@ -169,8 +200,9 @@ const isCp = async function(page, data) {
             console.log("click btn tutup")
             return false
         }
-
-        log(chalk.red(`[CHECKPOINT] ${nama}`));
+        if(data['Status'] != 'Gagal Login'){
+            log(chalk.red(`[CHECKPOINT] ${nama}`));
+        }
         send(`🔴CP : ${nama}`)
         return true
     } else {
@@ -202,7 +234,9 @@ const isMp = async function(page, data) {
         }
 
         log(chalk.red(`[NO MP] ${nama}`));
-        send(`🟣Tinjauan MP : ${nama}`)
+        if(data['Akses Marketplace'] != 'Tidak Aktif'){
+            send(`🟣Tinjauan MP : ${nama}`)
+        }
         return false
     } else {
         log(chalk.green(`[MP LOLOS] ${nama}`));
@@ -225,7 +259,9 @@ const isLimit = async function(page, data) {
         return false;
     }else{
         log(chalk.red(`[LIMIT] ${nama}`));
-        send(`🟣Tinjauan MP : ${nama}`)
+        if(data['Limit MP'] != 'Limit'){
+            send(`🟠Limit MP : ${nama}`)
+        }
         return true
     }
 };
@@ -239,5 +275,6 @@ module.exports = {
     cookiesMaster,
     cookiesPath,
     listAccount,
-    updateListAccount
+    updateListAccount,
+    updateJson
 };

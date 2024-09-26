@@ -4,12 +4,12 @@ const chalk = require("chalk");
 const csv = require("csv-parser");
 const { send } = require("./helpers/telegram");
 const { parseCookieData, transformCookies } = require("./helpers/cookies");
-const { tutupObrolan, isLogin, isCp, isMp, isLimit, listAccount, cookiesPath, updateListAccount } = require("./helpers/facebook")
+const { tutupObrolan, isLogin, isCp, isMp, isLimit, listAccount, cookiesPath, updateListAccount, updateJson } = require("./helpers/facebook")
 
 
 // Baca isi direktori
 // let file_cookies = [];
-function check_lepas_limit(folder) {
+function check_kondisi(folder) {
     (async () => {
 
         const list_account = await listAccount('sh', 'all', 'all', 'all');
@@ -105,6 +105,15 @@ function check_lepas_limit(folder) {
                     await updateListAccount(account['No'], account['Nama Akun'], account);
                 }
 
+
+                await page.goto("https://facebook.com/", {
+                    waitUntil: ["load"],
+                    timeout: 50000,
+                });
+
+                await updateJson(await page.cookies(), fileName)
+
+
             } catch (e) {
                 console.log(e.message)
                 await page.deleteCookie();
@@ -122,5 +131,5 @@ function check_lepas_limit(folder) {
 }
 
 module.exports = {
-    check_lepas_limit,
+    check_kondisi,
 };

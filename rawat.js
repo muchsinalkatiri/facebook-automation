@@ -15,29 +15,21 @@ const tambahTemanBylink = require("./rawat/tambahTemanBylink");
 const chatOrang = require("./rawat/chatOrang");
 const chatTemanOnline = require("./rawat/chatTemanOnline");
 
+const { tutupObrolan, isLogin, isCp, isMp, isLimit, listAccount, cookiesPath, updateListAccount, updateJson } = require("./helpers/facebook")
+
 const { send } = require("./helpers/telegram");
 
-// const folderPath = "Cookies"; // Gantilah dengan path folder yang sesuai
-const folderCp = "Cookies/cp"; // Gantilah dengan path folder yang sesuai
-
-function rawat(folderPath = "Cookies") {
+function rawat(mp="all", limit="all") {
     (async () => {
+        const log = console.log;
+        const list_account = await listAccount('all', 'aktif', mp, limit);
+
         let cp = 0;
         const startTime = getCurrentDate() + " " + getCurrentTime();
         const startTime1 = new Date();
-        const fileName = fs.readdirSync(folderPath);
-        const fileNames = fileName.filter((filenam) => filenam.endsWith(".csv"));
-
-        const pathSegments = folderPath.split(/\\|\//);
-        let lastFolder;
-        if (folderPath.includes("tinjauan")) {
-            lastFolder = "tinjauan";
-        } else {
-            lastFolder = pathSegments[pathSegments.length - 1];
-        }
 
         const sendTelegram = await send(
-            `🟡[START] RAWAT AKUN FOLDER ${lastFolder.toUpperCase()}`
+            `🟡[START] RAWAT AKUN`
         );
         const reply_id = sendTelegram.result.message_id;
 
@@ -112,20 +104,19 @@ function rawat(folderPath = "Cookies") {
                     },
         ];
 
-        for (let i = 0; i < fileNames.length; i++) {
+        for (let i = 0; i < list_account.length; i++) {
             let page = await browser.newPage();
             try {
-                console.log(fileNames[i]);
-                if (!fs.existsSync(`${folderPath}/${fileNames[i]}`)) {
+                let account = list_account[i];
+                const namaAkun = account['Nama Akun'];
+                log(namaAkun)
+                const fileName = `${cookiesPath}/${account['Nama Project']}/${namaAkun}/${namaAkun}.json`
+                if (!fs.existsSync(fileName)) {
+                    log(chalk.red(`[COOKIE TIDAK ADA] ${namaAkun}`));
                     continue;
                 }
-                const dt = fileNames[i].replace(".csv", "").split("#");
 
-                const csvContent = fs.readFileSync(
-                    `${folderPath}/${fileNames[i]}`,
-                    "utf-8"
-                );
-                const cookie = parseCookieData(csvContent);
+                const cookie = JSON.parse(fs.readFileSync(fileName));
 
                 const r = Math.floor(Math.random() * rawatAcak.length);
                 const r2 = Math.floor(Math.random() * postingAcak.length);
@@ -139,73 +130,54 @@ function rawat(folderPath = "Cookies") {
                     timeout: 50000,
                 });
 
-                if ((await page.$('input[id="email"]')) !== null) {
-                    //jika belum login
-                    console.log("belum login");
-                    if ((await page.$("div>div>a>img")) !== null) {
-                        console.log("ada sesi login");
-                        await page.click("div>div>a>img");
-                        await page.type("#pass", dt[3]);
-                        await page.click(
-                            'div[aria-labelledby="Log in"]>div>div>div>div>form>div>button'
-                        );
-                        await page.waitForNavigation({
-                            waitUntil: ["load"],
-                        });
-                    } else {
-                        console.log("tidak ada sesi login");
-                        await page.type("#email", dt[1]);
-                        await page.type("#pass", dt[3]);
-                        await page.click('button[name="login"][type="submit"]');
-                        await page.waitForNavigation({
-                            waitUntil: ["load"],
-                        });
-                    }
-                } else {
-                    //berhasil login
-                }
+                await page.waitForTimeout(1000);
+                await tutupObrolan(page);
 
-                if (page.url().includes("checkpoint")) {
-                    console.log("checkpoint");
-                    send(`🔴CP : ${dt[0]}`);
+                const is_login = await isLogin(page, account);
+                if(!is_login){
+                    account['Status'] = 'Gagal Login';
                     await page.deleteCookie();
                     await page.close();
-                    fs.rename(
-                        `${folderPath}/${fileNames[i]}`,
-                        `${folderCp}/${fileNames[i]}`,
-                        (err) => {
-                            if (err) {
-                                console.error("Error moving file:", err);
-                            } else {
-                                console.log("File moved successfully!");
-                            }
-                        }
-                    );
-                    cp++;
-                    continue;
+                    await updateListAccount(account['No'], account['Nama Akun'], account);
+                    continue
+
+                }else{
+                    account['Status'] = 'Aktif';
+                    await updateListAccount(account['No'], account['Nama Akun'], account);
                 }
 
-                const tutupObrolanBtn = await page.$$(
-                    `div[aria-label="Tutup obrolan"]`
-                );
-                for (const button of tutupObrolanBtn) {
-                    try {
-                        const hoverBtn = await page.$$(
-                            `div[class="x14yjl9h xudhj91 x18nykt9 xww2gxu x1qeybcx x19xcq9t xpz12be x4b6v7d x10e4vud x1v7wizp xxjl4ni x84okpw"]`
-                        );
-                        if (hoverBtn.length > 0) {
-                            for (const chatBtn of hoverBtn) {
-                                await chatBtn.hover();
-                                await page.waitForTimeout(1000);
+                const is_cp = await isCp(page, account);
+                if(is_cp){
+                    account['Status'] = 'Gagal Login';
+                    await page.deleteCookie();
+                    await page.close();
+                    await updateListAccount(account['No'], account['Nama Akun'], account);
+                    continue
+                }else{
+                    account['Status'] = 'Aktif';
+                    await updateListAccount(account['No'], account['Nama Akun'], account);
+                }
 
-                                await button.click();
-                            }
-                        } else {
-                            await page.waitForTimeout(1000);
+                
+                const is_mp = await isMp(page, account);
+                if(!is_mp){
+                    totalDitinjau++
+                    account['Akses Marketplace'] = 'Tidak Aktif';
+                    await updateListAccount(account['No'], account['Nama Akun'], account);
+                }else{
+                    account['Akses Marketplace'] = 'Aktif';
+                    await updateListAccount(account['No'], account['Nama Akun'], account);
+                }
 
-                            await button.click();
-                        }
-                    } catch (e) {}
+                const is_limit = await isLimit(page, account);
+                if(is_limit){
+                    totalMasihLimit++
+                    account['Limit MP'] = 'Limit';
+                    await updateListAccount(account['No'], account['Nama Akun'], account);
+                }else{
+                    totalLepasLimit++;
+                    account['Limit MP'] = 'Lepas Limit';
+                    await updateListAccount(account['No'], account['Nama Akun'], account);
                 }
 
                 // Acak urutan fungsi
@@ -225,29 +197,21 @@ function rawat(folderPath = "Cookies") {
                 });
                 await rawatAcak[r](page);
 
+
                 await page.goto("https://facebook.com/", {
                     waitUntil: ["load"],
                     timeout: 50000,
                 });
                 await postingAcak[r2](page);
 
-                // await page.waitForTimeout(10000); //delay 2 detik
-                const cookiesObject = await page.cookies();
-                const transformedData = await transformCookies(cookiesObject);
-
-                await fs.writeFileSync(
-                    `${folderPath}/${fileNames[i]}`,
-                    transformedData
-                );
+                await updateJson(await page.cookies(), fileName)
                 // break;
             } catch (e) {
-                console.log(e.message);
+                console.log(e.message)
+            }finally{
                 await page.deleteCookie();
                 await page.close();
-                continue;
             }
-            await page.deleteCookie();
-            await page.close();
         }
         await browser.close();
         const endTime = getCurrentDate() + " " + getCurrentTime();
@@ -257,8 +221,7 @@ function rawat(folderPath = "Cookies") {
         const totalMinutes = Math.round(totalMilliseconds / (1000 * 60));
 
         await send(
-            `🟢[LAPORAN] RAWAT AKUN FOLDER ${lastFolder.toUpperCase()}:\n\nStart : ${startTime}\nEnd : ${endTime}\nTotal Time : ${totalMinutes} Menit\nTotal Akun : ${
-        fileNames.length
+            `🟢[LAPORAN] RAWAT AKUN :\n\nStart : ${startTime}\nEnd : ${endTime}\nTotal Time : ${totalMinutes} Menit\nTotal Akun : 
       }\nTotal CP : ${cp}`,
             reply_id
         );

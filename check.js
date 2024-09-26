@@ -3,20 +3,20 @@ const puppeteer = require("puppeteer");
 const csv = require("csv-parser");
 const { send } = require("./helpers/telegram");
 const mpByLink = require("./rawat/mpByLink");
-const { tutupObrolan, belumLogin, checkpoint, tinjauan } = require("./helpers/facebook")
-
-// const folderPath = "Cookies"; // Gantilah dengan path folder yang sesuai
-// const folderPath = "Cookies"; // Gantilah dengan path folder yang sesuai
-
-const folderCp = "Cookies/cp"; // Gantilah dengan path folder yang sesuai
-const folderTinjauan = "Cookies/tinjauan"; // Gantilah dengan path folder yang sesuai
+const { tutupObrolan, isLogin, isCp, isMp, isLimit, listAccount, cookiesPath, updateListAccount, updateJson } = require("./helpers/facebook")
 
 
 
 // Baca isi direktori
 // let file_cookies = [];
-function check(folderPath = "Cookies", tipe) {
+function check(mp="all", limit="all", tipe) {
     (async () => {
+         let totalDitinjau = 0;
+        let totalLepasLimit = 0;
+        let totalMasihLimit = 0;
+        const list_account = await listAccount('all', 'aktif', mp, limit);
+        const log = console.log;
+
         send(`🔵[FB CHECK] start check, jam : ${new Date().getHours()}`)
         const pesanJson = JSON.parse(fs.readFileSync(`pesan.json`));
 
@@ -29,25 +29,18 @@ function check(folderPath = "Cookies", tipe) {
                 args: ["--start-maximized"],
                 devtools: false,
             });
-            const fileName = fs.readdirSync(folderPath);
-            const fileNames = fileName.filter((filenam) => filenam.endsWith(".csv"));
 
-            for (let i = 0; i < fileNames.length; i++) {
-                console.log(fileNames[i]);
-
-                if (!fs.existsSync(`${folderPath}/${fileNames[i]}`)) {
-                    continue
+            for (let i = 0; i < list_account.length; i++) {
+                let account = list_account[i];
+                const namaAkun = account['Nama Akun'];
+                log(namaAkun)
+                const fileName = `${cookiesPath}/${account['Nama Project']}/${namaAkun}/${namaAkun}.json`
+                if (!fs.existsSync(fileName)) {
+                    log(chalk.red(`[COOKIE TIDAK ADA] ${namaAkun}`));
+                    continue;
                 }
 
-                const csvContent = fs.readFileSync(
-                    `${folderPath}/${fileNames[i]}`,
-                    "utf-8"
-                );
-                const cookie = parseCookieData(csvContent);
-                const dt = fileNames[i].replace('.csv', '').split('#');
-                // console.log(dtArray);
-                // return;
-
+                const cookie = JSON.parse(fs.readFileSync(fileName));
 
                 let page
                 try {
@@ -61,19 +54,55 @@ function check(folderPath = "Cookies", tipe) {
                     });
 
 
-                    await page.waitForTimeout(5000);
+                   await page.waitForTimeout(1000);
                     await tutupObrolan(page);
 
-                    await belumLogin(page, dt);
-
-
-                    if (await checkpoint(page, dt, folderPath, folderCp, fileNames[i])) {
+                    const is_login = await isLogin(page, account);
+                    if(!is_login){
+                        account['Status'] = 'Gagal Login';
                         await page.deleteCookie();
                         await page.close();
+                        await updateListAccount(account['No'], account['Nama Akun'], account);
                         continue
+
+                    }else{
+                        account['Status'] = 'Aktif';
+                        await updateListAccount(account['No'], account['Nama Akun'], account);
                     }
 
-                    await mpByLink(page, dt[1]);
+                    // const is_cp = await isCp(page, account);
+                    // if(is_cp){
+                    //     account['Status'] = 'Gagal Login';
+                    //     await page.deleteCookie();
+                    //     await page.close();
+                    //     await updateListAccount(account['No'], account['Nama Akun'], account);
+                    //     continue
+                    // }else{
+                    //     account['Status'] = 'Aktif';
+                    //     await updateListAccount(account['No'], account['Nama Akun'], account);
+                    // }
+
+                    
+                    // const is_mp = await isMp(page, account);
+                    // if(!is_mp){
+                    //     totalDitinjau++
+                    //     account['Akses Marketplace'] = 'Tidak Aktif';
+                    //     await updateListAccount(account['No'], account['Nama Akun'], account);
+                    // }else{
+                    //     account['Akses Marketplace'] = 'Aktif';
+                    //     await updateListAccount(account['No'], account['Nama Akun'], account);
+                    // }
+
+                    // const is_limit = await isLimit(page, account);
+                    // if(is_limit){
+                    //     totalMasihLimit++
+                    //     account['Limit MP'] = 'Limit';
+                    //     await updateListAccount(account['No'], account['Nama Akun'], account);
+                    // }else{
+                    //     totalLepasLimit++;
+                    //     account['Limit MP'] = 'Lepas Limit';
+                    //     await updateListAccount(account['No'], account['Nama Akun'], account);
+                    // }
 
 
                     //check pesan MP
@@ -82,6 +111,7 @@ function check(folderPath = "Cookies", tipe) {
                         timeout: 50000,
                     });
 
+                   await page.waitForTimeout(3000);
 
 
                     let nama = "";
@@ -135,7 +165,7 @@ function check(folderPath = "Cookies", tipe) {
                                     const lastElement = pesanCust[pesanCust.length - 1];
 
                                     const pesanCustTerakhir = await lastElement.evaluate(element => element.innerText);
-                                    send(`Chat FBMP : ${dt[0]} \nPesan : ${pesanCustTerakhir} `)
+                                    send(`Chat FBMP : ${namaAkun} \nPesan : ${pesanCustTerakhir} `)
                                     break;
                                 }
 
@@ -158,7 +188,7 @@ function check(folderPath = "Cookies", tipe) {
 
                                     const pesanCustTerakhir = await lastElement.evaluate(element => element.innerText);
 
-                                    send(`⚪️Chat FBMP : ${dt[0]} \nProduk : ${pesanJ.barang} \nPesan : ${pesanCustTerakhir} `)
+                                    send(`⚪️Chat FBMP : ${namaAkun} \nProduk : ${pesanJ.barang} \nPesan : ${pesanCustTerakhir} `)
                                 }
                                 // console.log(pesan2)
 
@@ -168,7 +198,7 @@ function check(folderPath = "Cookies", tipe) {
 
                             } catch (e) {
                                 console.log(e.message)
-                                send(`⚫️Chat FBMP : ${dt[0]}`)
+                                send(`⚫️Chat FBMP : ${namaAkun}`)
                                 break;
                             }
                         } else {
@@ -177,47 +207,37 @@ function check(folderPath = "Cookies", tipe) {
                     }
                     while (true)
 
-                    // if ((await page.$('div[class="x1lq5wgf xgqcy7u x30kzoy x9jhf4c xdk7pt x1xc55vz xwnonoy"]')) !== null) {
-                    //     send(`Chat FBMP : ${dt[0]}`)
-                    // }
-                    if (await tinjauan(page, dt, folderPath, folderTinjauan, fileNames[i])) {
-                        continue
-                    }
 
+                    await updateJson(await page.cookies(), fileName)
                 } catch (e) {
                     console.log(e.message)
+                }finally{
                     await page.deleteCookie();
                     await page.close();
-                    continue
                 }
 
+               
 
-                // await page.waitForTimeout(10000); //delay 2 detik
-                const cookiesObject = await page.cookies();
-                const transformedData = await transformCookies(cookiesObject);
 
-                fs.writeFileSync(`${folderPath}/${fileNames[i]}`, transformedData);
-                await page.waitForTimeout(5000);
+                await page.waitForTimeout(10000);
+                continue;
+            }
+            await browser.close();
 
-                await page.deleteCookie();
-                await page.close();
+             const jamIstirahat = [8, 11, 14, 17, 22];
 
-                const jamIstirahat = [8, 11, 14, 17, 22];
+                
 
+            if (tipe == "noloop") {
+                send(`🟠[FB CHECK] Selesai Check Noloop`)
+                return;
+            }else{
                 if (jamIstirahat.includes(new Date().getHours())) {
                     console.log("[FB CHECK] istirahat dulu")
                     send(`🟠[FB CHECK] istirahat check, jam ${new Date().getHours()}`)
                     await browser.close();
                     return;
                 }
-
-                continue;
-            }
-            await browser.close();
-
-            if (tipe == "noloop") {
-                send(`🟠[FB CHECK] Selesai Check Noloop`)
-                return;
             }
         }
         while (true)

@@ -1,48 +1,50 @@
 const fs = require('fs');
 const csv = require('csv-parser');
+const { listAccount } = require("../helpers/facebook")
 
 async function tambahTemanBylink(page) {
-    const folderPath = 'C:/Users/Administrator/Documents/fbmp/Cookies/master/masterLinkProfile.csv';
-
     // Create an array to store CSV data
     const linkArray = [];
 
-    // Read the CSV file and parse its content
-    await new Promise((resolve, reject) => {
-        fs.createReadStream(folderPath)
-            .pipe(csv())
-            .on('data', (row) => {
-                // Push each row (CSV entry) into the linkArray
-                linkArray.push(row);
-            })
-            .on('end', () => {
-                // Now, linkArray contains the parsed CSV data
-                resolve();
-            })
-            .on('error', (error) => {
-                // Handle any errors during the CSV processing
-                reject(error);
-            });
-    });
+    const list_account = await listAccount('all', 'aktif', 'all', 'all');
 
+
+    let loop = 1;
     do {
-        let randomIndex = Math.floor(Math.random() * linkArray.length);
-        let link = linkArray[randomIndex]["Link"];
-
-        await page.goto(link, {
-            waitUntil: ["load"],
-            timeout: 50000,
-        });
-        await page.waitForTimeout(2000);
-
-        const btnTambahTeman = await page.$x(`//span[text()='Tambahkan teman']`);
+        let randomIndex = Math.floor(Math.random() * list_account.length);
+        let name = list_account[randomIndex]["Nama Akun"];
+        
         try {
-            await btnTambahTeman[0].click();
-            await page.waitForTimeout(5000);
-            break;
-        } catch (e) {
-            continue
-        }
+            const search = await page.$$('input[aria-label="Cari di Facebook"]');
+            await search[0].click();
+            await search[0].type(name);
+            await page.keyboard.press('Enter');
+
+            await page.waitForTimeout(2000);
+
+            await page.click('a[href^="/search/people/"][role="link"]');
+            await page.waitForTimeout(1000);
+
+            const link = await page.$$(`div[role="article"] span div a[role="presentation"]`);
+            await link[0].click();
+            await page.waitForTimeout(3000);
+
+            const tambah = await page.$$(`div[aria-label="Tambahkan teman"]`);
+
+            if(tambah.length > 0 ){
+                await tambah[0].click();
+                break;
+            }else{
+                continue;
+            }
+
+            if(loop == 3){
+                break;
+            }
+            
+            await page.waitForTimeout(3000);
+        } catch (e) {}
+
     } while (true);
 
 }
